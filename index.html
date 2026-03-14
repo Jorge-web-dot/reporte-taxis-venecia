@@ -15,6 +15,17 @@
         label { display: block; font-size: 0.75em; color: #d4af37; margin-bottom: 5px; text-transform: uppercase; font-weight: bold; }
         input, select { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #333; background: #111; color: white; margin-bottom: 15px; box-sizing: border-box; font-size: 1em; }
         
+        /* Estilos Buscador */
+        .search-container { position: relative; }
+        .search-results { position: absolute; top: 100%; left: 0; width: 100%; background: #222; border: 1px solid #d4af37; border-radius: 0 0 8px 8px; z-index: 100; max-height: 150px; overflow-y: auto; display: none; margin-top: -15px; }
+        .search-results div { padding: 10px; cursor: pointer; border-bottom: 1px solid #333; }
+        .search-results div:hover { background: #d4af37; color: black; }
+
+        /* Botones de Opción */
+        .tipo-selector { display: flex; gap: 10px; margin-bottom: 15px; }
+        .btn-tipo { flex: 1; padding: 10px; border: 1px solid #d4af37; background: transparent; color: #d4af37; cursor: pointer; border-radius: 8px; font-weight: bold; }
+        .btn-tipo.active { background: #d4af37; color: black; }
+
         .btn-gold { background: #d4af37; color: black; border: none; padding: 12px; width: 100%; border-radius: 8px; font-weight: bold; cursor: pointer; text-transform: uppercase; margin-top: 5px; }
         .btn-outline { background: transparent; border: 1px solid #d4af37; color: #d4af37; padding: 12px; border-radius: 8px; font-size: 0.9em; cursor: pointer; margin-bottom: 10px; width: 100%; font-weight: bold; }
 
@@ -37,33 +48,39 @@
 <body>
 
 <div class="container">
-    <h1>COMISIONES TAXISTAS</h1>
+    <h1>CONTROL VENECIA</h1>
     <div class="section">
         <label>Fecha</label>
         <input type="date" id="fecha-reg">
 
-        <label>Taxista</label>
-        <div style="display: flex; gap: 5px;">
-            <select id="select-taxista"><option value="">Seleccionar...</option></select>
-            <button class="btn-outline" style="width: 50px;" onclick="abrirAdmin('taxistas')">+</button>
+        <label>Buscar Taxista</label>
+        <div class="search-container">
+            <div style="display: flex; gap: 5px;">
+                <input type="text" id="busqueda-taxista" placeholder="Escribir nombre..." autocomplete="off">
+                <button class="btn-outline" style="width: 50px;" onclick="abrirAdmin('taxistas')">+</button>
+            </div>
+            <div id="resultados-busqueda" class="search-results"></div>
         </div>
 
-        <label>Botella / Producto</label>
-        <div style="display: flex; gap: 5px;">
-            <select id="select-botella"><option value="">Seleccionar...</option></select>
-            <button class="btn-outline" style="width: 50px;" onclick="abrirAdmin('botellas')">+</button>
+        <label>Tipo de Registro</label>
+        <div class="tipo-selector">
+            <button id="btn-botella" class="btn-tipo active" onclick="setTipo('Botella')">BOTELLA</button>
+            <button id="btn-bono" class="btn-tipo" onclick="setTipo('Bono')">BONO</button>
         </div>
 
-        <div class="flex-inputs">
-            <div>
-                <label>Precio Botella</label>
-                <input type="number" id="precio-botella" placeholder="1000">
-            </div>
-            <div>
-                <label>Comisión</label>
-                <input type="number" id="monto-comision" placeholder="50">
+        <div id="campos-dinamicos">
+            <div class="flex-inputs">
+                <div id="cont-precio">
+                    <label>Precio Botella</label>
+                    <input type="number" id="precio-botella" placeholder="0.00">
+                </div>
+                <div>
+                    <label id="label-monto">Comisión</label>
+                    <input type="number" id="monto-comision" placeholder="0.00">
+                </div>
             </div>
         </div>
+
         <button class="btn-gold" onclick="guardarComision()">GUARDAR REGISTRO</button>
     </div>
     <button class="btn-outline" onclick="verResumen()">VER RESUMEN DE FECHA</button>
@@ -77,9 +94,9 @@
             <thead>
                 <tr>
                     <th>TAXISTA</th>
-                    <th>BOTELLA</th>
-                    <th>PRECIO</th>
-                    <th>COMISIÓN</th>
+                    <th>TIPO</th>
+                    <th>PRECIO B.</th>
+                    <th>PAGO</th>
                     <th>ACCIONES</th>
                 </tr>
             </thead>
@@ -89,37 +106,10 @@
     </div>
 </div>
 
-<div id="modalEditar" class="modal">
-    <div class="modal-content">
-        <h3 style="color:#d4af37; margin-top:0;">EDITAR REGISTRO</h3>
-        <input type="hidden" id="edit-id">
-        
-        <label>Taxista</label>
-        <select id="edit-taxista"></select>
-
-        <label>Botella / Producto</label>
-        <select id="edit-botella"></select>
-
-        <div class="flex-inputs">
-            <div>
-                <label>Precio</label>
-                <input type="number" id="edit-precio">
-            </div>
-            <div>
-                <label>Comisión</label>
-                <input type="number" id="edit-comision">
-            </div>
-        </div>
-        
-        <button class="btn-gold" onclick="actualizarRegistro()">GUARDAR CAMBIOS</button>
-        <button class="btn-gold" style="background:#444; color:white; margin-top:10px;" onclick="document.getElementById('modalEditar').style.display='none'">CANCELAR</button>
-    </div>
-</div>
-
 <div id="modalAdmin" class="modal">
     <div class="modal-content">
-        <h3 id="tituloAdmin" style="color:#d4af37; margin-top:0;"></h3>
-        <input type="text" id="nuevo-item" placeholder="Escribir nombre...">
+        <h3 id="tituloAdmin" style="color:#d4af37; margin-top:0;">ADMINISTRAR TAXISTAS</h3>
+        <input type="text" id="nuevo-item" placeholder="Nombre del taxista...">
         <button class="btn-gold" onclick="agregarItem()">AGREGAR A LA LISTA</button>
         <div id="lista-items" style="margin-top:15px; max-height:200px; overflow-y:auto; font-size:0.8em; background: #000; padding: 5px;"></div>
         <button class="btn-gold" style="background:#444; color:white; margin-top:10px;" onclick="cerrarModal()">VOLVER</button>
@@ -138,84 +128,79 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
 
+    let taxistasLista = [];
+    let tipoSeleccionado = 'Botella';
+    let taxistaSeleccionado = "";
+
     document.getElementById('fecha-reg').value = new Date().toISOString().split('T')[0];
-    cargarListas();
+    
+    // Cargar taxistas y activar buscador
+    db.collection("config_taxis").doc("taxistas").onSnapshot(doc => { 
+        if(doc.exists) taxistasLista = doc.data().nombres || [];
+    });
 
-    function cargarListas() {
-        db.collection("config_taxis").doc("taxistas").onSnapshot(doc => { 
-            if(doc.exists) {
-                actualizarSelect("select-taxista", doc.data().nombres);
-                actualizarSelect("edit-taxista", doc.data().nombres);
-            } 
-        });
-        db.collection("config_taxis").doc("botellas").onSnapshot(doc => { 
-            if(doc.exists) {
-                actualizarSelect("select-botella", doc.data().nombres);
-                actualizarSelect("edit-botella", doc.data().nombres);
-            } 
-        });
-    }
+    const inputBusqueda = document.getElementById('busqueda-taxista');
+    const resultados = document.getElementById('resultados-busqueda');
 
-    function actualizarSelect(id, array) {
-        const sel = document.getElementById(id);
-        sel.innerHTML = '<option value="">Seleccionar...</option>';
-        if(array) array.sort().forEach(n => sel.innerHTML += `<option value="${n}">${n}</option>`);
-    }
+    inputBusqueda.addEventListener('input', () => {
+        const p = inputBusqueda.value.toLowerCase();
+        resultados.innerHTML = "";
+        if(!p) { resultados.style.display = "none"; return; }
+        
+        const filtrados = taxistasLista.filter(n => n.toLowerCase().includes(p));
+        if(filtrados.length > 0) {
+            filtrados.forEach(f => {
+                const div = document.createElement('div');
+                div.innerText = f;
+                div.onclick = () => {
+                    inputBusqueda.value = f;
+                    taxistaSeleccionado = f;
+                    resultados.style.display = "none";
+                };
+                resultados.appendChild(div);
+            });
+            resultados.style.display = "block";
+        } else {
+            resultados.style.display = "none";
+        }
+    });
 
-    function abrirAdmin(tipo) {
-        tipoAdminActual = tipo;
-        document.getElementById('tituloAdmin').innerText = "ADMINISTRAR " + tipo.toUpperCase();
-        document.getElementById('modalAdmin').style.display = "block";
-        mostrarItems(tipo);
-    }
-
-    function mostrarItems(tipo) {
-        db.collection("config_taxis").doc(tipo).get().then(doc => {
-            const div = document.getElementById('lista-items');
-            div.innerHTML = "";
-            if(doc.exists && doc.data().nombres) {
-                doc.data().nombres.sort().forEach(n => {
-                    div.innerHTML += `<div style="display:flex; justify-content:space-between; padding:8px; border-bottom:1px solid #333;">
-                        <span>${n}</span>
-                        <span style="color:#ff4444; cursor:pointer;" onclick="eliminarItemLista('${n}')">✕</span>
-                    </div>`;
-                });
-            }
-        });
-    }
-
-    function agregarItem() {
-        const val = document.getElementById('nuevo-item').value.trim();
-        if(!val) return;
-        db.collection("config_taxis").doc(tipoAdminActual).set({ nombres: firebase.firestore.FieldValue.arrayUnion(val) }, {merge:true}).then(() => {
-            document.getElementById('nuevo-item').value = "";
-            mostrarItems(tipoAdminActual);
-        });
-    }
-
-    function eliminarItemLista(val) {
-        if(confirm("¿Eliminar de la lista?")) {
-            db.collection("config_taxis").doc(tipoAdminActual).update({ nombres: firebase.firestore.FieldValue.arrayRemove(val) }).then(() => mostrarItems(tipoAdminActual));
+    function setTipo(t) {
+        tipoSeleccionado = t;
+        document.getElementById('btn-botella').classList.toggle('active', t === 'Botella');
+        document.getElementById('btn-bono').classList.toggle('active', t === 'Bono');
+        
+        if(t === 'Bono') {
+            document.getElementById('cont-precio').style.display = 'none';
+            document.getElementById('label-monto').innerText = 'Monto del Bono';
+            document.getElementById('precio-botella').value = 0;
+        } else {
+            document.getElementById('cont-precio').style.display = 'block';
+            document.getElementById('label-monto').innerText = 'Comisión';
         }
     }
 
-    function cerrarModal() { document.getElementById('modalAdmin').style.display = "none"; }
-    function cerrarResumen() { document.getElementById('modalResumen').style.display = "none"; }
-
     function guardarComision() {
         const fecha = document.getElementById('fecha-reg').value;
-        const taxista = document.getElementById('select-taxista').value;
-        const botella = document.getElementById('select-botella').value;
-        const precio = document.getElementById('precio-botella').value;
-        const comision = document.getElementById('monto-comision').value;
-        if(!taxista || !botella || !precio || !comision) return alert("Faltan datos");
+        const taxista = inputBusqueda.value;
+        const precio = parseFloat(document.getElementById('precio-botella').value) || 0;
+        const monto = parseFloat(document.getElementById('monto-comision').value) || 0;
+
+        if(!taxista || monto <= 0) return alert("Faltan datos o el monto es 0");
+        if(tipoSeleccionado === 'Botella' && precio <= 0) return alert("Poner precio de botella");
 
         db.collection("comisiones_taxis").add({
-            f: fecha, t: taxista, b: botella, p: parseFloat(precio), m: parseFloat(comision), ts: firebase.firestore.FieldValue.serverTimestamp()
+            f: fecha, 
+            t: taxista, 
+            b: tipoSeleccionado, // Guardamos 'Botella' o 'Bono'
+            p: precio, 
+            m: monto, 
+            ts: firebase.firestore.FieldValue.serverTimestamp()
         }).then(() => {
-            alert("¡Guardado!");
-            document.getElementById('precio-botella').value = "";
+            alert("¡Registrado como " + tipoSeleccionado + "!");
             document.getElementById('monto-comision').value = "";
+            document.getElementById('precio-botella').value = "";
+            inputBusqueda.value = "";
         });
     }
 
@@ -226,70 +211,72 @@
             const foot = document.getElementById('foot-resumen');
             body.innerHTML = "";
             let totalBotellas = 0;
-            let totalComisiones = 0;
+            let totalPagos = 0;
 
-            if (snap.empty) {
-                body.innerHTML = "<tr><td colspan='5'>Sin registros.</td></tr>";
-                foot.innerHTML = "";
-            } else {
-                snap.forEach(doc => {
-                    const d = doc.data();
-                    totalBotellas += (d.p || 0);
-                    totalComisiones += (d.m || 0);
-                    body.innerHTML += `<tr>
-                        <td style="color:#d4af37; font-weight:bold;">${d.t}</td>
-                        <td>${d.b}</td>
-                        <td>S/ ${d.p}</td>
-                        <td style="font-weight:bold;">S/ ${d.m}</td>
-                        <td>
-                            <button class="btn-edit" onclick="prepararEdicion('${doc.id}', '${d.t}', '${d.b}', ${d.p}, ${d.m})">✏️</button>
-                            <button class="btn-del" onclick="eliminarRegistro('${doc.id}')">🗑</button>
-                        </td>
-                    </tr>`;
-                });
-                foot.innerHTML = `<tr class="fila-total">
-                    <td colspan="2">TOTALES</td>
-                    <td>S/ ${totalBotellas}</td>
-                    <td>S/ ${totalComisiones}</td>
-                    <td></td>
+            snap.forEach(doc => {
+                const d = doc.data();
+                totalBotellas += (d.p || 0);
+                totalPagos += (d.m || 0);
+                body.innerHTML += `<tr>
+                    <td style="color:#d4af37;">${d.t}</td>
+                    <td>${d.b}</td>
+                    <td>S/ ${d.p}</td>
+                    <td style="font-weight:bold;">S/ ${d.m}</td>
+                    <td><button class="btn-del" onclick="eliminarRegistro('${doc.id}')">🗑</button></td>
                 </tr>`;
-            }
+            });
+            foot.innerHTML = `<tr class="fila-total">
+                <td colspan="2">TOTAL</td>
+                <td>S/ ${totalBotellas}</td>
+                <td>S/ ${totalPagos}</td>
+                <td></td>
+            </tr>`;
             document.getElementById('titulo-fecha').innerText = "RESUMEN: " + fecha;
             document.getElementById('modalResumen').style.display = "block";
         });
     }
 
-    // --- NUEVAS FUNCIONES DE EDICIÓN ---
-    function prepararEdicion(id, taxista, botella, precio, comision) {
-        document.getElementById('edit-id').value = id;
-        document.getElementById('edit-taxista').value = taxista;
-        document.getElementById('edit-botella').value = botella;
-        document.getElementById('edit-precio').value = precio;
-        document.getElementById('edit-comision').value = comision;
-        document.getElementById('modalEditar').style.display = 'block';
+    // Funciones Admin
+    function abrirAdmin() { 
+        document.getElementById('modalAdmin').style.display = "block"; 
+        mostrarItems();
+    }
+    function cerrarModal() { document.getElementById('modalAdmin').style.display = "none"; }
+    function cerrarResumen() { document.getElementById('modalResumen').style.display = "none"; }
+
+    function mostrarItems() {
+        db.collection("config_taxis").doc("taxistas").get().then(doc => {
+            const div = document.getElementById('lista-items');
+            div.innerHTML = "";
+            if(doc.exists && doc.data().nombres) {
+                doc.data().nombres.sort().forEach(n => {
+                    div.innerHTML += `<div style="display:flex; justify-content:space-between; padding:8px; border-bottom:1px solid #333;">
+                        <span>${n}</span>
+                        <span style="color:#ff4444;" onclick="eliminarItemLista('${n}')">✕</span>
+                    </div>`;
+                });
+            }
+        });
     }
 
-    function actualizarRegistro() {
-        const id = document.getElementById('edit-id').value;
-        const taxista = document.getElementById('edit-taxista').value;
-        const botella = document.getElementById('edit-botella').value;
-        const precio = parseFloat(document.getElementById('edit-precio').value);
-        const comision = parseFloat(document.getElementById('edit-comision').value);
+    function agregarItem() {
+        const val = document.getElementById('nuevo-item').value.trim();
+        if(!val) return;
+        db.collection("config_taxis").doc("taxistas").set({ nombres: firebase.firestore.FieldValue.arrayUnion(val) }, {merge:true}).then(() => {
+            document.getElementById('nuevo-item').value = "";
+            mostrarItems();
+        });
+    }
 
-        if(!taxista || !botella || isNaN(precio) || isNaN(comision)) return alert("Datos inválidos");
-
-        db.collection("comisiones_taxis").doc(id).update({
-            t: taxista, b: botella, p: precio, m: comision
-        }).then(() => {
-            alert("Registro actualizado");
-            document.getElementById('modalEditar').style.display = 'none';
-            verResumen(); // Refresca la tabla
-        }).catch(err => alert("Error: " + err));
+    function eliminarItemLista(val) {
+        if(confirm("¿Eliminar?")) {
+            db.collection("config_taxis").doc("taxistas").update({ nombres: firebase.firestore.FieldValue.arrayRemove(val) }).then(() => mostrarItems());
+        }
     }
 
     function eliminarRegistro(id) {
-        if(confirm("¿Seguro que quieres borrar este registro?")) {
-            db.collection("comisiones_taxis").doc(id).delete().then(() => { verResumen(); });
+        if(confirm("¿Borrar registro?")) {
+            db.collection("comisiones_taxis").doc(id).delete().then(() => verResumen());
         }
     }
 </script>
