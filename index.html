@@ -25,11 +25,17 @@
         .btn-add { background: transparent; border: 1px dashed #d4af37; color: #d4af37; padding: 12px; width: 100%; border-radius: 8px; cursor: pointer; font-weight: bold; margin: 10px 0; }
         .btn-outline { background: transparent; border: 1px solid #d4af37; color: #d4af37; padding: 12px; border-radius: 8px; font-size: 0.9em; cursor: pointer; margin-bottom: 10px; width: 100%; font-weight: bold; }
         .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); overflow-y: auto; }
-        .modal-content { background: #1a1a1a; margin: 10% auto; padding: 20px; border: 1px solid #d4af37; width: 90%; max-width: 600px; border-radius: 12px; }
+        .modal-content { background: #1a1a1a; margin: 5% auto; padding: 20px; border: 1px solid #d4af37; width: 95%; max-width: 600px; border-radius: 12px; }
         .tabla-resumen { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 0.75em; }
         .tabla-resumen th { background: #d4af37; color: black; padding: 8px; border: 1px solid #333; }
         .tabla-resumen td { padding: 8px; border: 1px solid #333; text-align: center; background: #111; }
         .btn-del { background: none; border: none; color: #ff4444; cursor: pointer; font-size: 1.2em; font-weight: bold; }
+        
+        /* Estilos para los totales generales */
+        .totales-container { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 5px; margin-bottom: 15px; }
+        .card-total { background: #000; padding: 8px; border-radius: 8px; border: 1px solid #333; text-align: center; }
+        .card-total span { display: block; font-size: 0.6em; color: #d4af37; text-transform: uppercase; margin-bottom: 3px; }
+        .card-total b { font-size: 0.9em; color: #fff; }
     </style>
 </head>
 <body>
@@ -61,6 +67,13 @@
     <div class="modal-content">
         <button style="float:right; background:#ff4444; color:white; border:none; padding:5px 10px; border-radius:5px;" onclick="cerrarModal('modalResumen')">X</button>
         <h2 id="titulo-fecha" style="color:#d4af37; font-size:1em; text-align:center;"></h2>
+        
+        <div class="totales-container">
+            <div class="card-total"><span>Total Botellas</span><b id="tot-bot">S/ 0</b></div>
+            <div class="card-total"><span>Total Comisión</span><b id="tot-com">S/ 0</b></div>
+            <div class="card-total"><span>Total Bonos</span><b id="tot-bono">S/ 0</b></div>
+        </div>
+
         <table class="tabla-resumen">
             <thead>
                 <tr><th>TAXISTA</th><th>TIPO</th><th>PRECIO B.</th><th>PAGO</th><th>X</th></tr>
@@ -160,7 +173,6 @@
         btn.innerText = "SUBIENDO...";
 
         try {
-            // Usamos una marca de tiempo base para mantener el orden correlativo exacto
             const timestampBase = Date.now();
 
             for (let i = 0; i < filas.length; i++) {
@@ -172,14 +184,14 @@
                 if (comision > 0) {
                     await db.collection("comisiones_taxis").add({
                         f: fecha, t: taxistaSeleccionado, b: 'Botella', p: precio, m: comision, 
-                        ts: timestampBase + (i * 10) // Asegura orden Botella #1, #2...
+                        ts: timestampBase + (i * 10)
                     });
                     totalEnvios++;
                 }
                 if (bono > 0) {
                     await db.collection("comisiones_taxis").add({
                         f: fecha, t: taxistaSeleccionado, b: 'Bono', p: 0, m: bono, 
-                        ts: timestampBase + (i * 10) + 5 // El bono va justo después de su botella
+                        ts: timestampBase + (i * 10) + 5
                     });
                     totalEnvios++;
                 }
@@ -206,19 +218,33 @@
 
     function verResumen() {
         const fecha = document.getElementById('fecha-reg').value;
-        // Ordenamos por fecha primero
         db.collection("comisiones_taxis").where("f", "==", fecha).get().then(snap => {
             const body = document.getElementById('body-resumen');
             body.innerHTML = "";
             
             let registros = [];
+            let sumaPrecios = 0;
+            let sumaComisiones = 0;
+            let sumaBonos = 0;
+
             snap.forEach(doc => {
-                registros.push({ id: doc.id, ...doc.data() });
+                const d = doc.data();
+                registros.push({ id: doc.id, ...d });
+                
+                // Cálculo de totales generales
+                if(d.b === 'Botella') {
+                    sumaPrecios += (parseFloat(d.p) || 0);
+                    sumaComisiones += (parseFloat(d.m) || 0);
+                } else if(d.b === 'Bono') {
+                    sumaBonos += (parseFloat(d.m) || 0);
+                }
             });
 
-            // LÓGICA DE ORDENAMIENTO:
-            // 1. Por nombre de taxista (t)
-            // 2. Por marca de tiempo de ingreso (ts)
+            // Actualizar Tarjetas en el Modal
+            document.getElementById('tot-bot').innerText = "S/ " + sumaPrecios.toFixed(2);
+            document.getElementById('tot-com').innerText = "S/ " + sumaComisiones.toFixed(2);
+            document.getElementById('tot-bono').innerText = "S/ " + sumaBonos.toFixed(2);
+
             registros.sort((a, b) => {
                 if (a.t.toLowerCase() < b.t.toLowerCase()) return -1;
                 if (a.t.toLowerCase() > b.t.toLowerCase()) return 1;
