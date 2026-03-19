@@ -19,7 +19,7 @@
         .search-results div:hover { background: #d4af37; color: black; }
         .fila-masiva { background: #111; padding: 12px; border-radius: 8px; margin-bottom: 12px; border: 1px solid #333; }
         .fila-header { color: #d4af37; font-size: 0.8em; font-weight: bold; margin-bottom: 8px; display: flex; justify-content: space-between; border-bottom: 1px solid #222; padding-bottom: 4px; }
-        .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+        .grid-custom { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
         .btn-gold { background: #d4af37; color: black; border: none; padding: 15px; width: 100%; border-radius: 8px; font-weight: bold; cursor: pointer; text-transform: uppercase; margin-top: 10px; }
         .btn-gold:disabled { background: #444; color: #888; cursor: not-allowed; }
         .btn-add { background: transparent; border: 1px dashed #d4af37; color: #d4af37; padding: 12px; width: 100%; border-radius: 8px; cursor: pointer; font-weight: bold; margin: 10px 0; }
@@ -31,11 +31,10 @@
         .tabla-resumen td { padding: 8px; border: 1px solid #333; text-align: center; background: #111; }
         .btn-del { background: none; border: none; color: #ff4444; cursor: pointer; font-size: 1.2em; font-weight: bold; }
         
-        /* Estilos para los totales generales */
-        .totales-container { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 5px; margin-bottom: 15px; }
-        .card-total { background: #000; padding: 8px; border-radius: 8px; border: 1px solid #333; text-align: center; }
-        .card-total span { display: block; font-size: 0.6em; color: #d4af37; text-transform: uppercase; margin-bottom: 3px; }
-        .card-total b { font-size: 0.9em; color: #fff; }
+        .totales-container { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
+        .card-total { background: #000; padding: 10px; border-radius: 8px; border: 1px solid #333; text-align: center; }
+        .card-total span { display: block; font-size: 0.65em; color: #d4af37; text-transform: uppercase; margin-bottom: 3px; }
+        .card-total b { font-size: 1.1em; color: #fff; }
     </style>
 </head>
 <body>
@@ -49,7 +48,7 @@
         <label>Taxista (Buscador)</label>
         <div class="search-container">
             <div style="display: flex; gap: 5px;">
-                <input type="text" id="busqueda-taxista" placeholder="Escribir nombre..." autocomplete="off">
+                <input type="text" id="busqueda-taxista" placeholder="Escribir nombre o 'CASA'..." autocomplete="off">
                 <button class="btn-outline" style="width: 50px; padding:0;" onclick="abrirAdmin()">+</button>
             </div>
             <div id="resultados-busqueda" class="search-results"></div>
@@ -69,14 +68,13 @@
         <h2 id="titulo-fecha" style="color:#d4af37; font-size:1em; text-align:center;"></h2>
         
         <div class="totales-container">
-            <div class="card-total"><span>Total Botellas</span><b id="tot-bot">S/ 0</b></div>
-            <div class="card-total"><span>Total Comisión</span><b id="tot-com">S/ 0</b></div>
-            <div class="card-total"><span>Total Bonos</span><b id="tot-bono">S/ 0</b></div>
+            <div class="card-total"><span>Total Botellas</span><b id="tot-bot">S/ 0.00</b></div>
+            <div class="card-total"><span>Total Pagos</span><b id="tot-pagos">S/ 0.00</b></div>
         </div>
 
         <table class="tabla-resumen">
             <thead>
-                <tr><th>TAXISTA</th><th>TIPO</th><th>PRECIO B.</th><th>PAGO</th><th>X</th></tr>
+                <tr><th>TAXISTA</th><th>PRECIO B.</th><th>PAGO</th><th>X</th></tr>
             </thead>
             <tbody id="body-resumen"></tbody>
         </table>
@@ -121,7 +119,7 @@
     inputBusqueda.addEventListener('input', () => {
         const p = inputBusqueda.value.toLowerCase();
         resultados.innerHTML = "";
-        if(p.length < 2) { resultados.style.display = "none"; return; }
+        if(p.length < 1) { resultados.style.display = "none"; return; }
         const filtrados = taxistasLista.filter(n => n.toLowerCase().includes(p));
         if(filtrados.length > 0) {
             filtrados.forEach(f => {
@@ -153,10 +151,9 @@
         div.className = 'fila-masiva';
         div.innerHTML = `
             <div class="fila-header">BOTELLA #${contadorFilas} <span>${taxistaSeleccionado}</span></div>
-            <div class="grid-3">
+            <div class="grid-custom">
                 <div><label>Precio B.</label><input type="number" class="val-precio" placeholder="0"></div>
                 <div><label>Comisión</label><input type="number" class="val-com" placeholder="0"></div>
-                <div><label>Bono</label><input type="number" class="val-bono" placeholder="0"></div>
             </div>`;
         document.getElementById('contenedor-filas').appendChild(div);
     }
@@ -167,7 +164,7 @@
         const btn = document.getElementById('btn-guardar');
         let totalEnvios = 0;
 
-        if(!taxistaSeleccionado) return alert("Selecciona un taxista");
+        if(!taxistaSeleccionado) return alert("Selecciona un taxista o 'CASA'");
         
         btn.disabled = true;
         btn.innerText = "SUBIENDO...";
@@ -179,19 +176,16 @@
                 const fila = filas[i];
                 const precio = parseFloat(fila.querySelector('.val-precio').value) || 0;
                 const comision = parseFloat(fila.querySelector('.val-com').value) || 0;
-                const bono = parseFloat(fila.querySelector('.val-bono').value) || 0;
 
-                if (comision > 0) {
+                // Permite guardar si hay precio (caso Casa) o si hay comisión
+                if (precio > 0 || comision > 0) {
                     await db.collection("comisiones_taxis").add({
-                        f: fecha, t: taxistaSeleccionado, b: 'Botella', p: precio, m: comision, 
+                        f: fecha, 
+                        t: taxistaSeleccionado, 
+                        b: 'Botella', 
+                        p: precio, 
+                        m: comision, 
                         ts: timestampBase + (i * 10)
-                    });
-                    totalEnvios++;
-                }
-                if (bono > 0) {
-                    await db.collection("comisiones_taxis").add({
-                        f: fecha, t: taxistaSeleccionado, b: 'Bono', p: 0, m: bono, 
-                        ts: timestampBase + (i * 10) + 5
                     });
                     totalEnvios++;
                 }
@@ -199,6 +193,8 @@
             if(totalEnvios > 0) {
                 alert("Guardado con éxito.");
                 resetearFormulario();
+            } else {
+                alert("No hay datos para guardar.");
             }
         } catch (e) {
             alert("Error al subir.");
@@ -224,26 +220,18 @@
             
             let registros = [];
             let sumaPrecios = 0;
-            let sumaComisiones = 0;
-            let sumaBonos = 0;
+            let sumaPagos = 0;
 
             snap.forEach(doc => {
                 const d = doc.data();
                 registros.push({ id: doc.id, ...d });
                 
-                // Cálculo de totales generales
-                if(d.b === 'Botella') {
-                    sumaPrecios += (parseFloat(d.p) || 0);
-                    sumaComisiones += (parseFloat(d.m) || 0);
-                } else if(d.b === 'Bono') {
-                    sumaBonos += (parseFloat(d.m) || 0);
-                }
+                sumaPrecios += (parseFloat(d.p) || 0);
+                sumaPagos += (parseFloat(d.m) || 0);
             });
 
-            // Actualizar Tarjetas en el Modal
             document.getElementById('tot-bot').innerText = "S/ " + sumaPrecios.toFixed(2);
-            document.getElementById('tot-com').innerText = "S/ " + sumaComisiones.toFixed(2);
-            document.getElementById('tot-bono').innerText = "S/ " + sumaBonos.toFixed(2);
+            document.getElementById('tot-pagos').innerText = "S/ " + sumaPagos.toFixed(2);
 
             registros.sort((a, b) => {
                 if (a.t.toLowerCase() < b.t.toLowerCase()) return -1;
@@ -254,9 +242,8 @@
             registros.forEach(d => {
                 body.innerHTML += `<tr>
                     <td style="color:#d4af37;">${d.t}</td>
-                    <td>${d.b}</td>
                     <td>S/ ${d.p || 0}</td>
-                    <td>S/ ${d.m}</td>
+                    <td>S/ ${d.m || 0}</td>
                     <td><button class="btn-del" onclick="eliminarRegistro('${d.id}')">✕</button></td>
                 </tr>`;
             });
