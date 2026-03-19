@@ -3,46 +3,33 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Registro Taxis - Venecia</title>
+    <title>Registro Masivo - Venecia</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
     <style>
         body { font-family: 'Segoe UI', sans-serif; background-color: #0d0d0d; color: #e0e0e0; margin: 0; padding: 10px; }
         .container { max-width: 500px; margin: auto; background: #1a1a1a; padding: 20px; border-radius: 15px; border: 1px solid #333; }
         h1 { text-align: center; color: #d4af37; font-size: 1.2em; text-transform: uppercase; letter-spacing: 2px; }
-        
         .section { background: #222; padding: 15px; border-radius: 10px; margin-bottom: 20px; border-left: 4px solid #d4af37; }
-        label { display: block; font-size: 0.75em; color: #d4af37; margin-bottom: 5px; text-transform: uppercase; font-weight: bold; }
-        input, select { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #333; background: #111; color: white; margin-bottom: 15px; box-sizing: border-box; font-size: 1em; }
-        
-        /* Estilos Buscador */
-        .search-container { position: relative; }
-        .search-results { position: absolute; top: 100%; left: 0; width: 100%; background: #222; border: 1px solid #d4af37; border-radius: 0 0 8px 8px; z-index: 100; max-height: 150px; overflow-y: auto; display: none; margin-top: -15px; }
-        .search-results div { padding: 10px; cursor: pointer; border-bottom: 1px solid #333; }
+        label { display: block; font-size: 0.7em; color: #d4af37; margin-bottom: 5px; text-transform: uppercase; font-weight: bold; }
+        input { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #333; background: #111; color: white; margin-bottom: 5px; box-sizing: border-box; font-size: 1em; }
+        .search-container { position: relative; margin-bottom: 15px; }
+        .search-results { position: absolute; top: 100%; left: 0; width: 100%; background: #222; border: 1px solid #d4af37; border-radius: 0 0 8px 8px; z-index: 100; max-height: 150px; overflow-y: auto; display: none; margin-top: -10px; }
+        .search-results div { padding: 12px; cursor: pointer; border-bottom: 1px solid #333; }
         .search-results div:hover { background: #d4af37; color: black; }
-
-        /* Botones de Opción */
-        .tipo-selector { display: flex; gap: 10px; margin-bottom: 15px; }
-        .btn-tipo { flex: 1; padding: 10px; border: 1px solid #d4af37; background: transparent; color: #d4af37; cursor: pointer; border-radius: 8px; font-weight: bold; }
-        .btn-tipo.active { background: #d4af37; color: black; }
-
-        .btn-gold { background: #d4af37; color: black; border: none; padding: 12px; width: 100%; border-radius: 8px; font-weight: bold; cursor: pointer; text-transform: uppercase; margin-top: 5px; }
+        .fila-masiva { background: #111; padding: 12px; border-radius: 8px; margin-bottom: 12px; border: 1px solid #333; }
+        .fila-header { color: #d4af37; font-size: 0.8em; font-weight: bold; margin-bottom: 8px; display: flex; justify-content: space-between; border-bottom: 1px solid #222; padding-bottom: 4px; }
+        .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+        .btn-gold { background: #d4af37; color: black; border: none; padding: 15px; width: 100%; border-radius: 8px; font-weight: bold; cursor: pointer; text-transform: uppercase; margin-top: 10px; }
+        .btn-gold:disabled { background: #444; color: #888; cursor: not-allowed; }
+        .btn-add { background: transparent; border: 1px dashed #d4af37; color: #d4af37; padding: 12px; width: 100%; border-radius: 8px; cursor: pointer; font-weight: bold; margin: 10px 0; }
         .btn-outline { background: transparent; border: 1px solid #d4af37; color: #d4af37; padding: 12px; border-radius: 8px; font-size: 0.9em; cursor: pointer; margin-bottom: 10px; width: 100%; font-weight: bold; }
-
-        .tabla-resumen { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 0.8em; }
+        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); overflow-y: auto; }
+        .modal-content { background: #1a1a1a; margin: 10% auto; padding: 20px; border: 1px solid #d4af37; width: 90%; max-width: 600px; border-radius: 12px; }
+        .tabla-resumen { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 0.75em; }
         .tabla-resumen th { background: #d4af37; color: black; padding: 8px; border: 1px solid #333; }
         .tabla-resumen td { padding: 8px; border: 1px solid #333; text-align: center; background: #111; }
-        
-        .fila-total { background: #222; color: #ffffff !important; font-weight: bold; }
-
-        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); overflow-y: auto; }
-        .modal-content { background: #1a1a1a; margin: 10% auto; padding: 20px; border: 1px solid #d4af37; width: 95%; max-width: 600px; border-radius: 12px; position: relative; }
-        
-        .flex-inputs { display: flex; gap: 10px; }
-        .flex-inputs div { flex: 1; }
-        .btn-cerrar { background: #ff4444; color: white; border: none; padding: 10px; border-radius: 5px; cursor: pointer; float: right; font-weight: bold; margin-bottom: 10px; }
         .btn-del { background: none; border: none; color: #ff4444; cursor: pointer; font-size: 1.2em; font-weight: bold; }
-        .btn-edit { background: none; border: none; color: #d4af37; cursor: pointer; font-size: 1.1em; margin-right: 5px; }
     </style>
 </head>
 <body>
@@ -50,69 +37,46 @@
 <div class="container">
     <h1>CONTROL VENECIA</h1>
     <div class="section">
-        <label>Fecha</label>
+        <label>Fecha de Jornada</label>
         <input type="date" id="fecha-reg">
 
-        <label>Buscar Taxista</label>
+        <label>Taxista (Buscador)</label>
         <div class="search-container">
             <div style="display: flex; gap: 5px;">
                 <input type="text" id="busqueda-taxista" placeholder="Escribir nombre..." autocomplete="off">
-                <button class="btn-outline" style="width: 50px;" onclick="abrirAdmin('taxistas')">+</button>
+                <button class="btn-outline" style="width: 50px; padding:0;" onclick="abrirAdmin()">+</button>
             </div>
             <div id="resultados-busqueda" class="search-results"></div>
         </div>
 
-        <label>Tipo de Registro</label>
-        <div class="tipo-selector">
-            <button id="btn-botella" class="btn-tipo active" onclick="setTipo('Botella')">BOTELLA</button>
-            <button id="btn-bono" class="btn-tipo" onclick="setTipo('Bono')">BONO</button>
-        </div>
+        <div id="contenedor-filas"></div>
 
-        <div id="campos-dinamicos">
-            <div class="flex-inputs">
-                <div id="cont-precio">
-                    <label>Precio Botella</label>
-                    <input type="number" id="precio-botella" placeholder="0.00">
-                </div>
-                <div>
-                    <label id="label-monto">Comisión</label>
-                    <input type="number" id="monto-comision" placeholder="0.00">
-                </div>
-            </div>
-        </div>
-
-        <button class="btn-gold" onclick="guardarComision()">GUARDAR REGISTRO</button>
+        <button id="btn-mas" class="btn-add" onclick="agregarNuevaFila()" style="display:none;">+ AÑADIR OTRA BOTELLA</button>
+        <button id="btn-guardar" class="btn-gold" onclick="guardarTodo()" style="display:none;">GUARDAR REGISTRO MASIVO</button>
     </div>
     <button class="btn-outline" onclick="verResumen()">VER RESUMEN DE FECHA</button>
 </div>
 
 <div id="modalResumen" class="modal">
     <div class="modal-content">
-        <button class="btn-cerrar" onclick="cerrarResumen()">CERRAR X</button>
-        <h2 id="titulo-fecha" style="color:#d4af37; font-size:1.1em; text-align:center; text-transform: uppercase; margin-top: 40px;"></h2>
+        <button style="float:right; background:#ff4444; color:white; border:none; padding:5px 10px; border-radius:5px;" onclick="cerrarModal('modalResumen')">X</button>
+        <h2 id="titulo-fecha" style="color:#d4af37; font-size:1em; text-align:center;"></h2>
         <table class="tabla-resumen">
             <thead>
-                <tr>
-                    <th>TAXISTA</th>
-                    <th>TIPO</th>
-                    <th>PRECIO B.</th>
-                    <th>PAGO</th>
-                    <th>ACCIONES</th>
-                </tr>
+                <tr><th>TAXISTA</th><th>TIPO</th><th>PRECIO B.</th><th>PAGO</th><th>X</th></tr>
             </thead>
             <tbody id="body-resumen"></tbody>
-            <tfoot id="foot-resumen"></tfoot>
         </table>
     </div>
 </div>
 
 <div id="modalAdmin" class="modal">
     <div class="modal-content">
-        <h3 id="tituloAdmin" style="color:#d4af37; margin-top:0;">ADMINISTRAR TAXISTAS</h3>
+        <h3 style="color:#d4af37; margin-top:0;">ADMINISTRAR TAXISTAS</h3>
         <input type="text" id="nuevo-item" placeholder="Nombre del taxista...">
         <button class="btn-gold" onclick="agregarItem()">AGREGAR A LA LISTA</button>
         <div id="lista-items" style="margin-top:15px; max-height:200px; overflow-y:auto; font-size:0.8em; background: #000; padding: 5px;"></div>
-        <button class="btn-gold" style="background:#444; color:white; margin-top:10px;" onclick="cerrarModal()">VOLVER</button>
+        <button class="btn-outline" style="margin-top:10px;" onclick="cerrarModal('modalAdmin')">VOLVER</button>
     </div>
 </div>
 
@@ -129,12 +93,11 @@
     const db = firebase.firestore();
 
     let taxistasLista = [];
-    let tipoSeleccionado = 'Botella';
     let taxistaSeleccionado = "";
+    let contadorFilas = 0;
 
     document.getElementById('fecha-reg').value = new Date().toISOString().split('T')[0];
     
-    // Cargar taxistas y activar buscador
     db.collection("config_taxis").doc("taxistas").onSnapshot(doc => { 
         if(doc.exists) taxistasLista = doc.data().nombres || [];
     });
@@ -145,8 +108,7 @@
     inputBusqueda.addEventListener('input', () => {
         const p = inputBusqueda.value.toLowerCase();
         resultados.innerHTML = "";
-        if(!p) { resultados.style.display = "none"; return; }
-        
+        if(p.length < 2) { resultados.style.display = "none"; return; }
         const filtrados = taxistasLista.filter(n => n.toLowerCase().includes(p));
         if(filtrados.length > 0) {
             filtrados.forEach(f => {
@@ -156,93 +118,133 @@
                     inputBusqueda.value = f;
                     taxistaSeleccionado = f;
                     resultados.style.display = "none";
+                    prepararPanelMasivo();
                 };
                 resultados.appendChild(div);
             });
             resultados.style.display = "block";
-        } else {
-            resultados.style.display = "none";
         }
     });
 
-    function setTipo(t) {
-        tipoSeleccionado = t;
-        document.getElementById('btn-botella').classList.toggle('active', t === 'Botella');
-        document.getElementById('btn-bono').classList.toggle('active', t === 'Bono');
+    function prepararPanelMasivo() {
+        document.getElementById('contenedor-filas').innerHTML = "";
+        contadorFilas = 0;
+        agregarNuevaFila();
+        document.getElementById('btn-mas').style.display = "block";
+        document.getElementById('btn-guardar').style.display = "block";
+    }
+
+    function agregarNuevaFila() {
+        contadorFilas++;
+        const div = document.createElement('div');
+        div.className = 'fila-masiva';
+        div.innerHTML = `
+            <div class="fila-header">BOTELLA #${contadorFilas} <span>${taxistaSeleccionado}</span></div>
+            <div class="grid-3">
+                <div><label>Precio B.</label><input type="number" class="val-precio" placeholder="0"></div>
+                <div><label>Comisión</label><input type="number" class="val-com" placeholder="0"></div>
+                <div><label>Bono</label><input type="number" class="val-bono" placeholder="0"></div>
+            </div>`;
+        document.getElementById('contenedor-filas').appendChild(div);
+    }
+
+    async function guardarTodo() {
+        const fecha = document.getElementById('fecha-reg').value;
+        const filas = document.querySelectorAll('.fila-masiva');
+        const btn = document.getElementById('btn-guardar');
+        let totalEnvios = 0;
+
+        if(!taxistaSeleccionado) return alert("Selecciona un taxista");
         
-        if(t === 'Bono') {
-            document.getElementById('cont-precio').style.display = 'none';
-            document.getElementById('label-monto').innerText = 'Monto del Bono';
-            document.getElementById('precio-botella').value = 0;
-        } else {
-            document.getElementById('cont-precio').style.display = 'block';
-            document.getElementById('label-monto').innerText = 'Comisión';
+        btn.disabled = true;
+        btn.innerText = "SUBIENDO...";
+
+        try {
+            // Usamos una marca de tiempo base para mantener el orden correlativo exacto
+            const timestampBase = Date.now();
+
+            for (let i = 0; i < filas.length; i++) {
+                const fila = filas[i];
+                const precio = parseFloat(fila.querySelector('.val-precio').value) || 0;
+                const comision = parseFloat(fila.querySelector('.val-com').value) || 0;
+                const bono = parseFloat(fila.querySelector('.val-bono').value) || 0;
+
+                if (comision > 0) {
+                    await db.collection("comisiones_taxis").add({
+                        f: fecha, t: taxistaSeleccionado, b: 'Botella', p: precio, m: comision, 
+                        ts: timestampBase + (i * 10) // Asegura orden Botella #1, #2...
+                    });
+                    totalEnvios++;
+                }
+                if (bono > 0) {
+                    await db.collection("comisiones_taxis").add({
+                        f: fecha, t: taxistaSeleccionado, b: 'Bono', p: 0, m: bono, 
+                        ts: timestampBase + (i * 10) + 5 // El bono va justo después de su botella
+                    });
+                    totalEnvios++;
+                }
+            }
+            if(totalEnvios > 0) {
+                alert("Guardado con éxito.");
+                resetearFormulario();
+            }
+        } catch (e) {
+            alert("Error al subir.");
+        } finally {
+            btn.disabled = false;
+            btn.innerText = "GUARDAR REGISTRO MASIVO";
         }
     }
 
-    function guardarComision() {
-        const fecha = document.getElementById('fecha-reg').value;
-        const taxista = inputBusqueda.value;
-        const precio = parseFloat(document.getElementById('precio-botella').value) || 0;
-        const monto = parseFloat(document.getElementById('monto-comision').value) || 0;
-
-        if(!taxista || monto <= 0) return alert("Faltan datos o el monto es 0");
-        if(tipoSeleccionado === 'Botella' && precio <= 0) return alert("Poner precio de botella");
-
-        db.collection("comisiones_taxis").add({
-            f: fecha, 
-            t: taxista, 
-            b: tipoSeleccionado, // Guardamos 'Botella' o 'Bono'
-            p: precio, 
-            m: monto, 
-            ts: firebase.firestore.FieldValue.serverTimestamp()
-        }).then(() => {
-            alert("¡Registrado como " + tipoSeleccionado + "!");
-            document.getElementById('monto-comision').value = "";
-            document.getElementById('precio-botella').value = "";
-            inputBusqueda.value = "";
-        });
+    function resetearFormulario() {
+        inputBusqueda.value = "";
+        taxistaSeleccionado = "";
+        document.getElementById('contenedor-filas').innerHTML = "";
+        document.getElementById('btn-mas').style.display = "none";
+        document.getElementById('btn-guardar').style.display = "none";
     }
 
     function verResumen() {
         const fecha = document.getElementById('fecha-reg').value;
-        db.collection("comisiones_taxis").where("f", "==", fecha).orderBy("ts", "desc").get().then(snap => {
+        // Ordenamos por fecha primero
+        db.collection("comisiones_taxis").where("f", "==", fecha).get().then(snap => {
             const body = document.getElementById('body-resumen');
-            const foot = document.getElementById('foot-resumen');
             body.innerHTML = "";
-            let totalBotellas = 0;
-            let totalPagos = 0;
-
+            
+            let registros = [];
             snap.forEach(doc => {
-                const d = doc.data();
-                totalBotellas += (d.p || 0);
-                totalPagos += (d.m || 0);
+                registros.push({ id: doc.id, ...doc.data() });
+            });
+
+            // LÓGICA DE ORDENAMIENTO:
+            // 1. Por nombre de taxista (t)
+            // 2. Por marca de tiempo de ingreso (ts)
+            registros.sort((a, b) => {
+                if (a.t.toLowerCase() < b.t.toLowerCase()) return -1;
+                if (a.t.toLowerCase() > b.t.toLowerCase()) return 1;
+                return a.ts - b.ts;
+            });
+
+            registros.forEach(d => {
                 body.innerHTML += `<tr>
                     <td style="color:#d4af37;">${d.t}</td>
                     <td>${d.b}</td>
-                    <td>S/ ${d.p}</td>
-                    <td style="font-weight:bold;">S/ ${d.m}</td>
-                    <td><button class="btn-del" onclick="eliminarRegistro('${doc.id}')">🗑</button></td>
+                    <td>S/ ${d.p || 0}</td>
+                    <td>S/ ${d.m}</td>
+                    <td><button class="btn-del" onclick="eliminarRegistro('${d.id}')">✕</button></td>
                 </tr>`;
             });
-            foot.innerHTML = `<tr class="fila-total">
-                <td colspan="2">TOTAL</td>
-                <td>S/ ${totalBotellas}</td>
-                <td>S/ ${totalPagos}</td>
-                <td></td>
-            </tr>`;
             document.getElementById('titulo-fecha').innerText = "RESUMEN: " + fecha;
             document.getElementById('modalResumen').style.display = "block";
         });
     }
 
-    // Funciones Admin
-    function abrirAdmin() { 
-        document.getElementById('modalAdmin').style.display = "block"; 
-        mostrarItems();
+    function eliminarRegistro(id) {
+        if(confirm("¿Borrar?")) db.collection("comisiones_taxis").doc(id).delete().then(() => verResumen());
     }
-    function cerrarModal() { document.getElementById('modalAdmin').style.display = "none"; }
-    function cerrarResumen() { document.getElementById('modalResumen').style.display = "none"; }
+
+    function abrirAdmin() { document.getElementById('modalAdmin').style.display = "block"; mostrarItems(); }
+    function cerrarModal(id) { document.getElementById(id).style.display = "none"; }
 
     function mostrarItems() {
         db.collection("config_taxis").doc("taxistas").get().then(doc => {
@@ -250,10 +252,7 @@
             div.innerHTML = "";
             if(doc.exists && doc.data().nombres) {
                 doc.data().nombres.sort().forEach(n => {
-                    div.innerHTML += `<div style="display:flex; justify-content:space-between; padding:8px; border-bottom:1px solid #333;">
-                        <span>${n}</span>
-                        <span style="color:#ff4444;" onclick="eliminarItemLista('${n}')">✕</span>
-                    </div>`;
+                    div.innerHTML += `<div style="display:flex; justify-content:space-between; padding:8px; border-bottom:1px solid #333;"><span>${n}</span><span style="color:#ff4444;" onclick="eliminarItemLista('${n}')">✕</span></div>`;
                 });
             }
         });
@@ -269,15 +268,7 @@
     }
 
     function eliminarItemLista(val) {
-        if(confirm("¿Eliminar?")) {
-            db.collection("config_taxis").doc("taxistas").update({ nombres: firebase.firestore.FieldValue.arrayRemove(val) }).then(() => mostrarItems());
-        }
-    }
-
-    function eliminarRegistro(id) {
-        if(confirm("¿Borrar registro?")) {
-            db.collection("comisiones_taxis").doc(id).delete().then(() => verResumen());
-        }
+        if(confirm("¿Eliminar?")) db.collection("config_taxis").doc("taxistas").update({ nombres: firebase.firestore.FieldValue.arrayRemove(val) }).then(() => mostrarItems());
     }
 </script>
 </body>
