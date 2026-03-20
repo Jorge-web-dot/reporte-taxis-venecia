@@ -12,7 +12,7 @@
         h1 { text-align: center; color: #d4af37; font-size: 1.2em; text-transform: uppercase; letter-spacing: 2px; }
         .section { background: #222; padding: 15px; border-radius: 10px; margin-bottom: 20px; border-left: 4px solid #d4af37; }
         label { display: block; font-size: 0.7em; color: #d4af37; margin-bottom: 5px; text-transform: uppercase; font-weight: bold; }
-        input { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #333; background: #111; color: white; margin-bottom: 5px; box-sizing: border-box; font-size: 1em; }
+        input, select { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #333; background: #111; color: white; margin-bottom: 5px; box-sizing: border-box; font-size: 1em; }
         .search-container { position: relative; margin-bottom: 15px; }
         .search-results { position: absolute; top: 100%; left: 0; width: 100%; background: #222; border: 1px solid #d4af37; border-radius: 0 0 8px 8px; z-index: 100; max-height: 150px; overflow-y: auto; display: none; margin-top: -10px; }
         .search-results div { padding: 12px; cursor: pointer; border-bottom: 1px solid #333; }
@@ -29,8 +29,14 @@
         .tabla-resumen { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 0.75em; }
         .tabla-resumen th { background: #d4af37; color: black; padding: 8px; border: 1px solid #333; }
         .tabla-resumen td { padding: 8px; border: 1px solid #333; text-align: center; background: #111; }
-        .btn-del { background: none; border: none; color: #ff4444; cursor: pointer; font-size: 1.2em; font-weight: bold; }
         
+        /* Estilos para el botón de opciones y menú */
+        .btn-opciones { background: #333; border: 1px solid #444; color: #d4af37; padding: 5px 8px; border-radius: 4px; cursor: pointer; font-size: 1.1em; }
+        .menu-acciones { display: none; position: absolute; background: #222; border: 1px solid #d4af37; border-radius: 5px; z-index: 2000; box-shadow: 0 4px 10px rgba(0,0,0,0.8); }
+        .menu-acciones button { display: block; width: 100%; padding: 10px 15px; background: none; border: none; color: white; text-align: left; cursor: pointer; font-size: 1.1em; border-bottom: 1px solid #333; }
+        .menu-acciones button:last-child { border-bottom: none; }
+        .menu-acciones button:hover { background: #333; color: #d4af37; }
+
         .totales-container { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
         .card-total { background: #000; padding: 10px; border-radius: 8px; border: 1px solid #333; text-align: center; }
         .card-total span { display: block; font-size: 0.65em; color: #d4af37; text-transform: uppercase; margin-bottom: 3px; }
@@ -74,10 +80,34 @@
 
         <table class="tabla-resumen">
             <thead>
-                <tr><th>TAXISTA</th><th>PRECIO B.</th><th>PAGO</th><th>X</th></tr>
+                <tr><th>TAXISTA</th><th>PRECIO B.</th><th>PAGO</th><th>⚙</th></tr>
             </thead>
             <tbody id="body-resumen"></tbody>
         </table>
+    </div>
+</div>
+
+<div id="menuAcciones" class="menu-acciones">
+    <button onclick="abrirModificar()">✎ Modificar</button>
+    <button onclick="confirmarEliminar()" style="color:#ff4444;">✕ Eliminar</button>
+</div>
+
+<div id="modalModificar" class="modal">
+    <div class="modal-content" style="max-width: 400px;">
+        <h3 style="color:#d4af37; margin-top:0; text-align: center;">MODIFICAR REGISTRO</h3>
+        <input type="hidden" id="edit-id">
+        
+        <label>Taxista Responsable</label>
+        <select id="edit-taxista"></select>
+        
+        <label>Precio de Botella (S/)</label>
+        <input type="number" id="edit-precio">
+        
+        <label>Comisión / Bono (S/)</label>
+        <input type="number" id="edit-comision">
+
+        <button class="btn-gold" onclick="guardarModificacion()">GUARDAR CAMBIOS</button>
+        <button class="btn-outline" style="margin-top:10px; border-color:#888; color:#888;" onclick="cerrarModal('modalModificar')">CANCELAR</button>
     </div>
 </div>
 
@@ -106,6 +136,7 @@
     let taxistasLista = [];
     let taxistaSeleccionado = "";
     let contadorFilas = 0;
+    let registroActivo = null; // Para guardar el ID y datos al modificar/eliminar
 
     document.getElementById('fecha-reg').value = new Date().toISOString().split('T')[0];
     
@@ -165,19 +196,15 @@
         let totalEnvios = 0;
 
         if(!taxistaSeleccionado) return alert("Selecciona un taxista o 'CASA'");
-        
         btn.disabled = true;
         btn.innerText = "SUBIENDO...";
 
         try {
             const timestampBase = Date.now();
-
             for (let i = 0; i < filas.length; i++) {
                 const fila = filas[i];
                 const precio = parseFloat(fila.querySelector('.val-precio').value) || 0;
                 const comision = parseFloat(fila.querySelector('.val-com').value) || 0;
-
-                // Permite guardar si hay precio (caso Casa) o si hay comisión
                 if (precio > 0 || comision > 0) {
                     await db.collection("comisiones_taxis").add({
                         f: fecha, 
@@ -217,7 +244,6 @@
         db.collection("comisiones_taxis").where("f", "==", fecha).get().then(snap => {
             const body = document.getElementById('body-resumen');
             body.innerHTML = "";
-            
             let registros = [];
             let sumaPrecios = 0;
             let sumaPagos = 0;
@@ -225,7 +251,6 @@
             snap.forEach(doc => {
                 const d = doc.data();
                 registros.push({ id: doc.id, ...d });
-                
                 sumaPrecios += (parseFloat(d.p) || 0);
                 sumaPagos += (parseFloat(d.m) || 0);
             });
@@ -244,7 +269,7 @@
                     <td style="color:#d4af37;">${d.t}</td>
                     <td>S/ ${d.p || 0}</td>
                     <td>S/ ${d.m || 0}</td>
-                    <td><button class="btn-del" onclick="eliminarRegistro('${d.id}')">✕</button></td>
+                    <td><button class="btn-opciones" onclick="mostrarMenuAcciones(event, '${d.id}', '${d.t}', ${d.p}, ${d.m})">⚙</button></td>
                 </tr>`;
             });
             document.getElementById('titulo-fecha').innerText = "RESUMEN: " + fecha;
@@ -252,8 +277,59 @@
         });
     }
 
-    function eliminarRegistro(id) {
-        if(confirm("¿Borrar?")) db.collection("comisiones_taxis").doc(id).delete().then(() => verResumen());
+    // Lógica del Menú de Acciones
+    function mostrarMenuAcciones(e, id, t, p, m) {
+        registroActivo = { id, t, p, m };
+        const menu = document.getElementById('menuAcciones');
+        menu.style.display = 'block';
+        menu.style.left = (e.pageX - 100) + 'px';
+        menu.style.top = (e.pageY) + 'px';
+
+        // Cerrar menú al hacer clic fuera
+        setTimeout(() => {
+            window.onclick = function() {
+                menu.style.display = 'none';
+                window.onclick = null;
+            };
+        }, 100);
+    }
+
+    function abrirModificar() {
+        if(!registroActivo) return;
+        const sel = document.getElementById('edit-taxista');
+        sel.innerHTML = '<option value="CASA">CASA</option>';
+        taxistasLista.sort().forEach(n => {
+            if(n.toUpperCase() !== "CASA") sel.innerHTML += `<option value="${n}">${n}</option>`;
+        });
+
+        document.getElementById('edit-id').value = registroActivo.id;
+        document.getElementById('edit-taxista').value = registroActivo.t;
+        document.getElementById('edit-precio').value = registroActivo.p;
+        document.getElementById('edit-comision').value = registroActivo.m;
+        
+        document.getElementById('modalModificar').style.display = 'block';
+    }
+
+    function guardarModificacion() {
+        const id = document.getElementById('edit-id').value;
+        const nuevosDatos = {
+            t: document.getElementById('edit-taxista').value,
+            p: parseFloat(document.getElementById('edit-precio').value) || 0,
+            m: parseFloat(document.getElementById('edit-comision').value) || 0
+        };
+
+        db.collection("comisiones_taxis").doc(id).update(nuevosDatos).then(() => {
+            alert("Registro actualizado correctamente.");
+            cerrarModal('modalModificar');
+            verResumen();
+        });
+    }
+
+    function confirmarEliminar() {
+        if(!registroActivo) return;
+        if(confirm(`¿Seguro que deseas eliminar el registro de ${registroActivo.t}?`)) {
+            db.collection("comisiones_taxis").doc(registroActivo.id).delete().then(() => verResumen());
+        }
     }
 
     function abrirAdmin() { document.getElementById('modalAdmin').style.display = "block"; mostrarItems(); }
