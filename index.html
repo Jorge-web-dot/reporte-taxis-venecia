@@ -30,7 +30,6 @@
         .tabla-resumen th { background: #d4af37; color: black; padding: 8px; border: 1px solid #333; }
         .tabla-resumen td { padding: 8px; border: 1px solid #333; text-align: center; background: #111; }
         
-        /* Estilos para el botón de opciones y menú */
         .btn-opciones { background: #333; border: 1px solid #444; color: #d4af37; padding: 5px 8px; border-radius: 4px; cursor: pointer; font-size: 1.1em; }
         .menu-acciones { display: none; position: absolute; background: #222; border: 1px solid #d4af37; border-radius: 5px; z-index: 2000; box-shadow: 0 4px 10px rgba(0,0,0,0.8); }
         .menu-acciones button { display: block; width: 100%; padding: 10px 15px; background: none; border: none; color: white; text-align: left; cursor: pointer; font-size: 1.1em; border-bottom: 1px solid #333; }
@@ -136,7 +135,7 @@
     let taxistasLista = [];
     let taxistaSeleccionado = "";
     let contadorFilas = 0;
-    let registroActivo = null; // Para guardar el ID y datos al modificar/eliminar
+    let registroActivo = null;
 
     document.getElementById('fecha-reg').value = new Date().toISOString().split('T')[0];
     
@@ -277,36 +276,24 @@
         });
     }
 
-    // Lógica del Menú de Acciones
     function mostrarMenuAcciones(e, id, t, p, m) {
         registroActivo = { id, t, p, m };
         const menu = document.getElementById('menuAcciones');
         menu.style.display = 'block';
         menu.style.left = (e.pageX - 100) + 'px';
         menu.style.top = (e.pageY) + 'px';
-
-        // Cerrar menú al hacer clic fuera
-        setTimeout(() => {
-            window.onclick = function() {
-                menu.style.display = 'none';
-                window.onclick = null;
-            };
-        }, 100);
+        setTimeout(() => { window.onclick = function() { menu.style.display = 'none'; window.onclick = null; }; }, 100);
     }
 
     function abrirModificar() {
         if(!registroActivo) return;
         const sel = document.getElementById('edit-taxista');
         sel.innerHTML = '<option value="CASA">CASA</option>';
-        taxistasLista.sort().forEach(n => {
-            if(n.toUpperCase() !== "CASA") sel.innerHTML += `<option value="${n}">${n}</option>`;
-        });
-
+        taxistasLista.sort().forEach(n => { if(n.toUpperCase() !== "CASA") sel.innerHTML += `<option value="${n}">${n}</option>`; });
         document.getElementById('edit-id').value = registroActivo.id;
         document.getElementById('edit-taxista').value = registroActivo.t;
         document.getElementById('edit-precio').value = registroActivo.p;
         document.getElementById('edit-comision').value = registroActivo.m;
-        
         document.getElementById('modalModificar').style.display = 'block';
     }
 
@@ -317,9 +304,8 @@
             p: parseFloat(document.getElementById('edit-precio').value) || 0,
             m: parseFloat(document.getElementById('edit-comision').value) || 0
         };
-
         db.collection("comisiones_taxis").doc(id).update(nuevosDatos).then(() => {
-            alert("Registro actualizado correctamente.");
+            alert("Registro actualizado.");
             cerrarModal('modalModificar');
             verResumen();
         });
@@ -327,9 +313,7 @@
 
     function confirmarEliminar() {
         if(!registroActivo) return;
-        if(confirm(`¿Seguro que deseas eliminar el registro de ${registroActivo.t}?`)) {
-            db.collection("comisiones_taxis").doc(registroActivo.id).delete().then(() => verResumen());
-        }
+        if(confirm(`¿Borrar registro de ${registroActivo.t}?`)) db.collection("comisiones_taxis").doc(registroActivo.id).delete().then(() => verResumen());
     }
 
     function abrirAdmin() { document.getElementById('modalAdmin').style.display = "block"; mostrarItems(); }
@@ -341,10 +325,45 @@
             div.innerHTML = "";
             if(doc.exists && doc.data().nombres) {
                 doc.data().nombres.sort().forEach(n => {
-                    div.innerHTML += `<div style="display:flex; justify-content:space-between; padding:8px; border-bottom:1px solid #333;"><span>${n}</span><span style="color:#ff4444;" onclick="eliminarItemLista('${n}')">✕</span></div>`;
+                    div.innerHTML += `
+                        <div style="display:flex; justify-content:space-between; align-items:center; padding:8px; border-bottom:1px solid #333;">
+                            <span>${n}</span>
+                            <div style="display:flex; gap:15px;">
+                                <span style="color:#d4af37; cursor:pointer;" onclick="editarNombreGlobal('${n}')">✎</span>
+                                <span style="color:#ff4444; cursor:pointer;" onclick="eliminarItemLista('${n}')">✕</span>
+                            </div>
+                        </div>`;
                 });
             }
         });
+    }
+
+    async function editarNombreGlobal(nombreViejo) {
+        const nuevoNombre = prompt("Nuevo nombre para " + nombreViejo + ":", nombreViejo);
+        if (!nuevoNombre || nuevoNombre.trim() === "" || nuevoNombre === nombreViejo) return;
+
+        if (confirm(`¿Quieres corregir todas las botellas pasadas de "${nombreViejo}" a "${nuevoNombre}"?`)) {
+            try {
+                // 1. Actualizar lista de nombres
+                let listaActualizada = taxistasLista.filter(n => n !== nombreViejo);
+                listaActualizada.push(nuevoNombre.trim());
+                await db.collection("config_taxis").doc("taxistas").update({ nombres: listaActualizada });
+
+                // 2. Actualizar botellas antiguas en batch (Lote seguro)
+                const batch = db.batch();
+                const snapshot = await db.collection("comisiones_taxis").where("t", "==", nombreViejo).get();
+                
+                snapshot.forEach(doc => {
+                    batch.update(db.collection("comisiones_taxis").doc(doc.id), { t: nuevoNombre.trim() });
+                });
+
+                await batch.commit();
+                alert("Nombre actualizado y registros unificados con éxito.");
+                mostrarItems();
+            } catch (e) {
+                alert("Error al actualizar.");
+            }
+        }
     }
 
     function agregarItem() {
@@ -357,7 +376,7 @@
     }
 
     function eliminarItemLista(val) {
-        if(confirm("¿Eliminar?")) db.collection("config_taxis").doc("taxistas").update({ nombres: firebase.firestore.FieldValue.arrayRemove(val) }).then(() => mostrarItems());
+        if(confirm("¿Eliminar de la lista?")) db.collection("config_taxis").doc("taxistas").update({ nombres: firebase.firestore.FieldValue.arrayRemove(val) }).then(() => mostrarItems());
     }
 </script>
 </body>
